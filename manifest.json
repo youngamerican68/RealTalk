@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "RealTalk Draft",
+  "version": "1.0.8",
+  "description": "Transform emotional messages into professional workplace communication",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "identity"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["debug-simple.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "RealTalk Draft"
+  },
+  "commands": {
+    "rewrite-text": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+R",
+        "mac": "Command+Shift+R"
+      },
+      "description": "Rewrite selected text"
+    }
+  },
+  "host_permissions": [
+    "https://api.realtalk-draft.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*"
+  ]
+}

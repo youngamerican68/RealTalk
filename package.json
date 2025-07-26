@@ -1,0 +1,31 @@
+{
+  "name": "realtalk-draft",
+  "version": "1.0.0",
+  "description": "Transform emotional messages into professional workplace communication",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Chrome extension build complete'",
+    "deploy": "vercel",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "workplace-communication",
+    "professional-writing",
+    "ai-rewriting"
+  ],
+  "author": "RealTalk Draft Team",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "pg": "^8.11.0",
+    "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

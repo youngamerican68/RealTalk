@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RealTalk Draft</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <h1>RealTalk Draft</h1>
+        <span class="tagline">Professional Communication</span>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="original-section" id="originalSection">
+        <h3>Original Message</h3>
+        <div class="original-text" id="originalText">
+          Select text or focus on an input field to get started
+        </div>
+      </div>
+
+      <div class="loading-section hidden" id="loadingSection">
+        <div class="spinner"></div>
+        <p>Generating professional rewrites...</p>
+      </div>
+
+      <div class="rewrites-section hidden" id="rewritesSection">
+        <h3>Professional Rewrites</h3>
+        
+        <div class="rewrite-option" data-type="professional">
+          <div class="rewrite-header">
+            <span class="rewrite-emoji">💼</span>
+            <span class="rewrite-label">Professional</span>
+            <button class="copy-btn" data-type="professional">Copy</button>
+          </div>
+          <div class="rewrite-text" id="professionalText"></div>
+          <div class="rewrite-meta">
+            <span class="char-count" id="professionalCount"></span>
+          </div>
+        </div>
+
+        <div class="rewrite-option" data-type="direct">
+          <div class="rewrite-header">
+            <span class="rewrite-emoji">🎯</span>
+            <span class="rewrite-label">Direct</span>
+            <button class="copy-btn" data-type="direct">Copy</button>
+          </div>
+          <div class="rewrite-text" id="directText"></div>
+          <div class="rewrite-meta">
+            <span class="char-count" id="directCount"></span>
+          </div>
+        </div>
+
+        <div class="rewrite-option" data-type="collaborative">
+          <div class="rewrite-header">
+            <span class="rewrite-emoji">🤝</span>
+            <span class="rewrite-label">Collaborative</span>
+            <button class="copy-btn" data-type="collaborative">Copy</button>
+          </div>
+          <div class="rewrite-text" id="collaborativeText"></div>
+          <div class="rewrite-meta">
+            <span class="char-count" id="collaborativeCount"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="error-section hidden" id="errorSection">
+        <div class="error-icon">⚠️</div>
+        <div class="error-message" id="errorMessage"></div>
+        <button class="retry-btn" id="retryBtn">Try Again</button>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="usage-info">
+        <span class="usage-text" id="usageText">Loading...</span>
+      </div>
+      <div class="footer-actions">
+        <button class="upgrade-btn hidden" id="upgradeBtn">Upgrade to Pro</button>
+        <button class="rewrite-btn" id="rewriteBtn">Rewrite Text</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
