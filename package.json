@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'Chrome extension build complete'",
+    "build": "mkdir -p dist && cp public/index.html dist/",
     "deploy": "vercel",
     "test": "echo 'No tests specified'"
   },
