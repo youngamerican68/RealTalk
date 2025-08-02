@@ -21,4 +21,5 @@ build/
 Thumbs.db
 
 # Vercel
-.vercel
+.vercel*.zip
+.env*
