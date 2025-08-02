@@ -10,6 +10,7 @@ class RealTalkPopup {
     this.setupEventListeners();
     this.loadUsageInfo();
     this.loadCurrentText();
+    this.setupManualInput();
   }
   
   setupEventListeners() {
@@ -47,20 +48,32 @@ class RealTalkPopup {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tabs[0]) {
-        const response = await chrome.tabs.sendMessage(tabs[0].id, {
-          action: 'getSelectedText'
-        });
-        
-        if (response && response.text) {
-          this.currentText = response.text;
-          this.currentPlatform = response.platform || 'general';
-          this.updateOriginalText(this.currentText);
-          this.enableRewriteButton();
-          this.checkCompatibility(tabs[0].url);
-        } else {
-          this.showNoTextMessage();
-          this.checkCompatibility(tabs[0].url);
-        }
+        // Add a small delay to ensure content script is loaded
+        setTimeout(async () => {
+          try {
+            console.log('🔍 Attempting to contact content script...');
+            const response = await chrome.tabs.sendMessage(tabs[0].id, {
+              action: 'getSelectedText'
+            });
+            
+            console.log('🔍 Content script response:', response);
+            
+            if (response && response.text && response.text.trim()) {
+              this.currentText = response.text.trim();
+              this.currentPlatform = response.platform || 'general';
+              this.updateOriginalText(this.currentText);
+              this.enableRewriteButton();
+              this.checkCompatibility(tabs[0].url);
+            } else {
+              this.showNoTextMessage();
+              this.checkCompatibility(tabs[0].url);
+            }
+          } catch (error) {
+            console.error('🔍 Content script error:', error);
+            console.log('Content script not ready, using manual input only');
+            this.showNoTextMessage();
+          }
+        }, 25);
       }
     } catch (error) {
       console.error('Failed to get current text:', error);
@@ -123,6 +136,12 @@ class RealTalkPopup {
   updateOriginalText(text) {
     const originalText = document.getElementById('originalText');
     originalText.textContent = text;
+    
+    // Clear manual input when auto-detection works
+    const manualInput = document.getElementById('manualInput');
+    if (manualInput) {
+      manualInput.value = '';
+    }
   }
   
   showNoTextMessage() {
@@ -144,10 +163,16 @@ class RealTalkPopup {
   }
   
   async handleRewrite() {
-    if (!this.currentText) {
+    // Check manual input first
+    const manualInput = document.getElementById('manualInput');
+    const manualText = manualInput ? manualInput.value.trim() : '';
+    
+    if (manualText) {
+      this.currentText = manualText;
+    } else if (!this.currentText) {
       await this.loadCurrentText();
       if (!this.currentText) {
-        this.showError('No text found to rewrite. Please select text or focus on an input field.');
+        this.showError('No text found to rewrite. Please select text, focus on an input field, or type in the text box above.');
         return;
       }
     }
@@ -189,20 +214,56 @@ class RealTalkPopup {
   }
   
   showRewrites(rewrites, fromCache = false) {
+    console.log('🎨 Displaying rewrites:', JSON.stringify(rewrites, null, 2));
+    console.log('🎨 Type of rewrites:', typeof rewrites);
+    console.log('🎨 Is array?', Array.isArray(rewrites));
+    
     this.hideAllSections();
     
     if (Array.isArray(rewrites)) {
-      document.getElementById('professionalText').textContent = rewrites[0] || '';
-      document.getElementById('directText').textContent = rewrites[1] || '';
-      document.getElementById('collaborativeText').textContent = rewrites[2] || '';
+      // Map the response types to our UI elements
+      const typeMapping = {
+        'Formal': 'professionalText',
+        'Professional': 'professionalText', 
+        'Direct': 'directText',
+        'Collaborative': 'collaborativeText'
+      };
       
-      document.getElementById('professionalCount').textContent = `${(rewrites[0] || '').length} chars`;
-      document.getElementById('directCount').textContent = `${(rewrites[1] || '').length} chars`;
-      document.getElementById('collaborativeCount').textContent = `${(rewrites[2] || '').length} chars`;
+      const countMapping = {
+        'Formal': 'professionalCount',
+        'Professional': 'professionalCount',
+        'Direct': 'directCount', 
+        'Collaborative': 'collaborativeCount'
+      };
+      
+      rewrites.forEach((rewrite) => {
+        const textId = typeMapping[rewrite.type];
+        const countId = countMapping[rewrite.type];
+        
+        if (textId && countId) {
+          document.getElementById(textId).textContent = rewrite.text || '';
+          document.getElementById(countId).textContent = `${(rewrite.text || '').length} chars`;
+        }
+      });
     } else if (rewrites.rewrites) {
-      rewrites.rewrites.forEach((rewrite, index) => {
-        const textId = ['professionalText', 'directText', 'collaborativeText'][index];
-        const countId = ['professionalCount', 'directCount', 'collaborativeCount'][index];
+      // Map the response types to our UI elements
+      const typeMapping = {
+        'Formal': 'professionalText',
+        'Professional': 'professionalText', 
+        'Direct': 'directText',
+        'Collaborative': 'collaborativeText'
+      };
+      
+      const countMapping = {
+        'Formal': 'professionalCount',
+        'Professional': 'professionalCount',
+        'Direct': 'directCount', 
+        'Collaborative': 'collaborativeCount'
+      };
+      
+      rewrites.rewrites.forEach((rewrite) => {
+        const textId = typeMapping[rewrite.type];
+        const countId = countMapping[rewrite.type];
         
         if (textId && countId) {
           document.getElementById(textId).textContent = rewrite.text || '';
@@ -353,6 +414,19 @@ class RealTalkPopup {
         }
       });
     });
+  }
+  
+  setupManualInput() {
+    const manualInput = document.getElementById('manualInput');
+    if (manualInput) {
+      manualInput.addEventListener('input', () => {
+        if (manualInput.value.trim()) {
+          this.enableRewriteButton();
+        }
+      });
+    }
+    // Always enable the button initially
+    this.enableRewriteButton();
   }
 }
 

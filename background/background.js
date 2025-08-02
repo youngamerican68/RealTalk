@@ -1,6 +1,6 @@
 class RealTalkBackground {
   constructor() {
-    this.apiBaseUrl = 'https://api.realtalk-draft.com';
+    this.apiBaseUrl = 'https://real-talk-sigma.vercel.app';
     this.init();
   }
   
@@ -147,27 +147,36 @@ class RealTalkBackground {
   
   async callRewriteAPI(text, platform) {
     try {
+      console.log('🚀 Making API call to:', `${this.apiBaseUrl}/api/rewrite`);
       const storage = await chrome.storage.local.get(['userId']);
+      
+      const requestData = {
+        text: text,
+        platform: platform,
+        userId: storage.userId
+      };
+      console.log('📤 Request data:', requestData);
       
       const response = await fetch(`${this.apiBaseUrl}/api/rewrite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          text: text,
-          platform: platform,
-          userId: storage.userId
-        })
+        body: JSON.stringify(requestData)
       });
+      
+      console.log('📥 Response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ API response:', JSON.stringify(result, null, 2));
+      console.log('✅ Rewrites array:', result.rewrites);
+      return result;
     } catch (error) {
-      console.error('API call failed:', error);
+      console.error('❌ API call failed:', error);
       return { error: 'API call failed' };
     }
   }

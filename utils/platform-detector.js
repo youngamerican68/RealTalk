@@ -15,6 +15,10 @@ class PlatformDetector {
       return 'linkedin';
     }
     
+    if (hostname.includes('youtube.com')) {
+      return 'youtube';
+    }
+    
     return 'general';
   }
   
@@ -45,6 +49,21 @@ class PlatformDetector {
         '.ql-editor[contenteditable="true"]',
         '[data-placeholder*="message"]',
         '[data-placeholder*="post"]'
+      ],
+      youtube: [
+        '#contenteditable-root[contenteditable="true"]',
+        '.yt-formatted-string[contenteditable="true"]',
+        '[data-placeholder*="comment"]',
+        'div[contenteditable="true"][placeholder*="comment"]',
+        '#contenteditable-textarea',
+        '.yt-formatted-string[contenteditable="true"][role="textbox"]',
+        'div[id*="contenteditable-root"]',
+        'div[contenteditable="true"][role="textbox"]',
+        '#simple-box #contenteditable-root',
+        'ytd-commentbox #contenteditable-root',
+        'tp-yt-paper-dialog #contenteditable-root',
+        '[aria-label*="Add a comment"]',
+        'yt-formatted-string[slot="textbox"]'
       ],
       general: [
         'textarea',

@@ -68,6 +68,28 @@ class RealTalkContent {
       return text.substring(0, 500);
     }
     
+    // YouTube debug: Try to find any comment input
+    if (this.platform === 'youtube') {
+      console.log('🔍 YouTube Debug: Looking for comment inputs...');
+      const allInputs = document.querySelectorAll('[contenteditable="true"], textarea, input');
+      console.log('🔍 Found inputs:', allInputs);
+      
+      for (const input of allInputs) {
+        console.log('🔍 Input element:', {
+          tagName: input.tagName,
+          id: input.id,
+          className: input.className,
+          placeholder: input.placeholder,
+          ariaLabel: input.getAttribute('aria-label'),
+          textContent: input.textContent || input.value
+        });
+        
+        if (input.textContent || input.value) {
+          return (input.textContent || input.value).substring(0, 500);
+        }
+      }
+    }
+    
     return '';
   }
   
@@ -131,5 +153,13 @@ class RealTalkContent {
   }
 }
 
-console.log('🚀 RealTalk content script loaded!');
-const realTalkContent = new RealTalkContent();
+console.log('🚀 RealTalk content script starting to load...');
+console.log('🚀 PlatformDetector available:', typeof PlatformDetector);
+
+try {
+  console.log('🚀 Creating RealTalkContent instance...');
+  const realTalkContent = new RealTalkContent();
+  console.log('🚀 RealTalk content script loaded successfully!');
+} catch (error) {
+  console.error('🚀 RealTalk content script failed to load:', error);
+}
