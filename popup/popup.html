@@ -16,6 +16,53 @@
     </header>
 
     <div class="content">
+      <!-- Risk Assessment Section -->
+      <div class="risk-section hidden" id="riskSection">
+        <div class="risk-indicator" id="riskIndicator">
+          <div class="risk-level" id="riskLevel">
+            <span class="risk-badge" id="riskBadge">LOW</span>
+            <span class="risk-text" id="riskText">Communication Risk</span>
+          </div>
+          <div class="context-badges" id="contextBadges">
+            <!-- Dynamic context badges will be inserted here -->
+          </div>
+        </div>
+        <div class="risk-recommendations hidden" id="riskRecommendations">
+          <!-- Risk-specific recommendations will appear here -->
+        </div>
+      </div>
+
+      <!-- Scenario Selection -->
+      <div class="scenario-section hidden" id="scenarioSection">
+        <h3>Communication Mode</h3>
+        <div class="scenario-modes">
+          <div class="scenario-mode active" data-scenario="general">
+            <span class="scenario-emoji">💼</span>
+            <span class="scenario-label">General</span>
+          </div>
+          <div class="scenario-mode" data-scenario="reputationShield">
+            <span class="scenario-emoji">🛡️</span>
+            <span class="scenario-label">Reputation Shield</span>
+          </div>
+          <div class="scenario-mode" data-scenario="deEscalation">
+            <span class="scenario-emoji">🤝</span>
+            <span class="scenario-label">De-escalation</span>
+          </div>
+          <div class="scenario-mode" data-scenario="crisisResponse">
+            <span class="scenario-emoji">🆘</span>
+            <span class="scenario-label">Crisis Response</span>
+          </div>
+          <div class="scenario-mode" data-scenario="professionalPushback">
+            <span class="scenario-emoji">💪</span>
+            <span class="scenario-label">Pushback</span>
+          </div>
+          <div class="scenario-mode" data-scenario="apologyFramework">
+            <span class="scenario-emoji">🤲</span>
+            <span class="scenario-label">Apology</span>
+          </div>
+        </div>
+      </div>
+
       <div class="original-section" id="originalSection">
         <h3>Original Message</h3>
         <div class="original-text" id="originalText">
@@ -81,6 +128,7 @@
         <span class="usage-text" id="usageText">Loading...</span>
       </div>
       <div class="footer-actions">
+        <button class="panic-btn hidden" id="panicBtn">🚨 PANIC MODE</button>
         <button class="upgrade-btn hidden" id="upgradeBtn">Upgrade to Pro</button>
         <button class="rewrite-btn" id="rewriteBtn">Rewrite Text</button>
       </div>

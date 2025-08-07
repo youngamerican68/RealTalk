@@ -122,7 +122,7 @@ class RealTalkBackground {
         return;
       }
       
-      const result = await this.callRewriteAPI(request.text, request.platform);
+      const result = await this.callRewriteAPI(request);
       
       if (result.error) {
         const cachedRewrites = await this.getCachedRewrites(request.text);
@@ -145,14 +145,16 @@ class RealTalkBackground {
     }
   }
   
-  async callRewriteAPI(text, platform) {
+  async callRewriteAPI(request) {
     try {
       console.log('🚀 Making API call to:', `${this.apiBaseUrl}/api/rewrite`);
       const storage = await chrome.storage.local.get(['userId']);
       
       const requestData = {
-        text: text,
-        platform: platform,
+        text: request.text,
+        platform: request.platform,
+        scenarioType: request.scenarioType,
+        riskLevel: request.riskLevel,
         userId: storage.userId
       };
       console.log('📤 Request data:', requestData);
