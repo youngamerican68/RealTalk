@@ -51,6 +51,16 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        console.log('Rate limit hit, using fallback rewrites');
+        const fallbackRewrites = generateFallbackRewrites(text, platform, scenarioType);
+        return res.status(200).json({
+          rewrites: fallbackRewrites,
+          platform: platform,
+          userId: userId,
+          fallback: true
+        });
+      }
       throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
@@ -80,7 +90,7 @@ export default async function handler(req, res) {
       });
 
     } catch (parseError) {
-      const fallbackRewrites = generateFallbackRewrites(text, platform);
+      const fallbackRewrites = generateFallbackRewrites(text, platform, scenarioType);
       return res.status(200).json({
         rewrites: fallbackRewrites,
         platform: platform,
@@ -308,21 +318,30 @@ Format: Return a JSON array with 3 objects containing "type" and "text" fields.`
   return platformPrompts[platform] || platformPrompts.general;
 }
 
-function generateFallbackRewrites(text, platform) {
-  const baseText = text.length > 100 ? text.substring(0, 100) + '...' : text;
-  
-  return [
-    {
-      type: 'professional',
-      text: `I wanted to bring to your attention: ${baseText}. I'd appreciate your guidance on how to proceed.`
-    },
-    {
-      type: 'direct',
-      text: `I need to discuss: ${baseText}. Can we schedule time to address this?`
-    },
-    {
-      type: 'collaborative',
-      text: `I'd like to work together on: ${baseText}. What are your thoughts on next steps?`
-    }
+function generateFallbackRewrites(text, platform, scenarioType) {
+  const scenarioFallbacks = {
+    reputationShield: [
+      { type: 'professional', text: `I'd like to discuss this matter professionally. Could we schedule time to address this thoughtfully?` },
+      { type: 'direct', text: `I understand there may be concerns here. I'm committed to finding a constructive resolution.` },
+      { type: 'collaborative', text: `I value our working relationship and would appreciate the opportunity to discuss this further.` }
+    ],
+    deEscalation: [
+      { type: 'professional', text: `I understand this is important to you. Let's work together to find a solution that works for everyone.` },
+      { type: 'direct', text: `I hear your concerns and want to address them properly. Can we discuss this when we both have time to focus?` },
+      { type: 'collaborative', text: `I appreciate you bringing this up. Let's collaborate on finding the best path forward.` }
+    ],
+    crisisResponse: [
+      { type: 'professional', text: `Thank you for bringing this to my attention. I want to address this properly and will get back to you shortly.` },
+      { type: 'direct', text: `I understand this needs immediate attention. Let me look into this and provide you with an update soon.` },
+      { type: 'collaborative', text: `I appreciate your patience. I'm committed to resolving this and will keep you updated on progress.` }
+    ]
+  };
+
+  const defaultFallbacks = [
+    { type: 'professional', text: `I wanted to discuss this with you. Could we find time to talk about the best approach?` },
+    { type: 'direct', text: `I think this deserves our attention. When would be a good time to address this together?` },
+    { type: 'collaborative', text: `I'd value your perspective on this. Could we work together to find a good solution?` }
   ];
+
+  return scenarioFallbacks[scenarioType] || defaultFallbacks;
 }
