@@ -235,6 +235,8 @@ class RealTalkBackground {
       sendResponse({ success: false, error: error.message });
     }
   }
+
+
 }
 
 const realTalkBackground = new RealTalkBackground();

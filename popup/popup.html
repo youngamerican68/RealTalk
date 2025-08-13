@@ -13,9 +13,51 @@
         <h1>RealTalk Draft</h1>
         <span class="tagline">Professional Communication</span>
       </div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="simple">Simple Mode</button>
+        <button class="mode-btn" data-mode="expert">Expert Mode</button>
+      </div>
     </header>
 
     <div class="content">
+      <!-- Simple Mode Interface -->
+      <div class="simple-mode-section" id="simpleModeSection">
+        <div class="smooth-it-section">
+          <h3>✨ Smooth It Out</h3>
+          <div class="input-section">
+            <textarea id="smoothInput" placeholder="Paste your rough draft here or we'll detect text from the page..." class="smooth-textarea"></textarea>
+          </div>
+          
+          <div class="tone-section">
+            <label class="tone-label">Tone</label>
+            <div class="tone-slider-container">
+              <div class="tone-slider">
+                <input type="range" id="toneSlider" min="0" max="100" value="50" class="slider">
+                <div class="tone-labels">
+                  <span class="tone-label-left">😊 Friendly</span>
+                  <span class="tone-label-right">💪 Firm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="smooth-result hidden" id="smoothResult">
+            <div class="result-header">
+              <span class="result-emoji">✨</span>
+              <span class="result-label">Smoothed Message</span>
+              <button class="copy-btn" id="smoothCopyBtn">Copy</button>
+            </div>
+            <div class="result-text" id="smoothResultText"></div>
+            <div class="result-footer">
+              <span class="result-encouragement" id="resultEncouragement">Send with confidence!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expert Mode Interface -->
+      <div class="expert-mode-section hidden" id="expertModeSection">
+      
       <!-- Risk Assessment Section -->
       <div class="risk-section hidden" id="riskSection">
         <div class="risk-indicator" id="riskIndicator">
@@ -34,11 +76,11 @@
 
       <!-- Scenario Selection -->
       <div class="scenario-section hidden" id="scenarioSection">
-        <h3>Communication Mode</h3>
+        <h3>Crisis Mode</h3>
         <div class="scenario-modes">
           <div class="scenario-mode active" data-scenario="general">
             <span class="scenario-emoji">💼</span>
-            <span class="scenario-label">General</span>
+            <span class="scenario-label">Professional</span>
           </div>
           <div class="scenario-mode" data-scenario="reputationShield">
             <span class="scenario-emoji">🛡️</span>
@@ -52,23 +94,14 @@
             <span class="scenario-emoji">🆘</span>
             <span class="scenario-label">Crisis Response</span>
           </div>
-          <div class="scenario-mode" data-scenario="professionalPushback">
-            <span class="scenario-emoji">💪</span>
-            <span class="scenario-label">Pushback</span>
-          </div>
-          <div class="scenario-mode" data-scenario="apologyFramework">
-            <span class="scenario-emoji">🤲</span>
-            <span class="scenario-label">Apology</span>
-          </div>
         </div>
       </div>
 
       <div class="original-section" id="originalSection">
-        <h3>Original Message</h3>
+        <h3>Message</h3>
         <div class="original-text" id="originalText">
           Select text or focus on an input field to get started
         </div>
-        <textarea id="manualInput" placeholder="Or type your message here..." style="width: 100%; height: 60px; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
       </div>
 
       <div class="loading-section hidden" id="loadingSection">
@@ -121,6 +154,8 @@
         <div class="error-message" id="errorMessage"></div>
         <button class="retry-btn" id="retryBtn">Try Again</button>
       </div>
+      
+      </div> <!-- End expert-mode-section -->
     </div>
 
     <footer class="footer">

@@ -106,6 +106,7 @@ class RealTalkPopup {
     this.riskAssessment = null;
     this.rewrites = null;
     this.riskDetector = new RiskDetector();
+    this.currentMode = 'simple'; // Start in simple mode
     this.init();
   }
   
@@ -114,9 +115,26 @@ class RealTalkPopup {
     this.loadUsageInfo();
     this.loadCurrentText();
     this.setupManualInput();
+    this.loadPreferredMode();
   }
   
   setupEventListeners() {
+    // Mode toggle buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.switchMode(e.target.dataset.mode);
+      });
+    });
+    
+    
+    // Simple mode copy button
+    const smoothCopyBtn = document.getElementById('smoothCopyBtn');
+    if (smoothCopyBtn) {
+      smoothCopyBtn.addEventListener('click', () => {
+        this.copySmoothedText();
+      });
+    }
+    
     document.getElementById('rewriteBtn').addEventListener('click', () => {
       this.handleRewrite();
     });
@@ -203,6 +221,14 @@ class RealTalkPopup {
         this.currentPlatform = response.platform || 'general';
         this.updateOriginalText(this.currentText);
         this.enableRewriteButton();
+        
+        // Auto-populate Simple Mode input if in Simple Mode
+        if (this.currentMode === 'simple') {
+          const smoothInput = document.getElementById('smoothInput');
+          if (smoothInput) {
+            smoothInput.value = this.currentText;
+          }
+        }
         this.checkCompatibility(tab.url);
         
         // Perform risk assessment
@@ -304,6 +330,209 @@ class RealTalkPopup {
     const btn = document.getElementById('rewriteBtn');
     btn.disabled = false;
     btn.textContent = 'Rewrite Text';
+  }
+  
+  /**
+   * Switch between Simple and Expert modes
+   */
+  switchMode(mode) {
+    this.currentMode = mode;
+    
+    // Update button states
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    
+    // Show/hide appropriate sections
+    const simpleModeSection = document.getElementById('simpleModeSection');
+    const expertModeSection = document.getElementById('expertModeSection');
+    
+    if (mode === 'simple') {
+      simpleModeSection.classList.remove('hidden');
+      expertModeSection.classList.add('hidden');
+      
+      // Update footer button for Simple Mode
+      const rewriteBtn = document.getElementById('rewriteBtn');
+      rewriteBtn.innerHTML = '<span class="smooth-btn-icon">✨</span> Smooth It';
+      rewriteBtn.onclick = () => this.handleSmoothIt();
+      
+      // Load any selected text into simple mode input
+      const smoothInput = document.getElementById('smoothInput');
+      if (this.currentText && smoothInput) {
+        smoothInput.value = this.currentText;
+      }
+    } else {
+      simpleModeSection.classList.add('hidden');
+      expertModeSection.classList.remove('hidden');
+      
+      // Update footer button for Expert Mode
+      const rewriteBtn = document.getElementById('rewriteBtn');
+      rewriteBtn.innerHTML = 'Rewrite Text';
+      rewriteBtn.onclick = () => this.handleRewrite();
+      
+      // Show scenario section for expert mode if we have text
+      if (this.currentText) {
+        document.getElementById('scenarioSection').classList.remove('hidden');
+      }
+    }
+    
+    // Store user preference
+    chrome.storage.local.set({ preferredMode: mode });
+  }
+  
+  /**
+   * Handle Simple Mode "Smooth It" button click
+   */
+  async handleSmoothIt() {
+    const smoothInput = document.getElementById('smoothInput');
+    const toneSlider = document.getElementById('toneSlider');
+    const smoothResult = document.getElementById('smoothResult');
+    const rewriteBtn = document.getElementById('rewriteBtn');
+    
+    const text = smoothInput.value.trim();
+    if (!text) {
+      smoothInput.focus();
+      return;
+    }
+    
+    // Show loading state
+    rewriteBtn.disabled = true;
+    rewriteBtn.innerHTML = '<span class="smooth-btn-icon">⏳</span> Smoothing...';
+    smoothResult.classList.add('hidden');
+    
+    try {
+      const toneValue = parseInt(toneSlider.value);
+      const response = await this.callSmoothAPI(text, toneValue);
+      
+      if (response.rewrites && response.rewrites.length > 0) {
+        // Use the first rewrite as the "smoothed" text
+        const smoothedText = response.rewrites[0].text;
+        this.displaySmoothResult(smoothedText, toneValue);
+      } else {
+        throw new Error(response.error || 'Failed to smooth text');
+      }
+    } catch (error) {
+      console.error('Smooth It error:', error);
+      this.showError('Failed to smooth your text. Please try again.');
+    } finally {
+      // Reset button
+      rewriteBtn.disabled = false;
+      rewriteBtn.innerHTML = '<span class="smooth-btn-icon">✨</span> Smooth It';
+    }
+  }
+  
+  /**
+   * Call the Simple Mode API through background script
+   */
+  async callSmoothAPI(text, toneValue) {
+    // Map tone slider to communication mode
+    let scenarioType;
+    if (toneValue <= 33) {
+      scenarioType = 'deEscalation'; // Friendly
+    } else if (toneValue <= 66) {
+      scenarioType = 'general'; // Balanced
+    } else {
+      scenarioType = 'professionalPushback'; // Firm
+    }
+    
+    // Use the same message passing system as Expert Mode
+    return new Promise((resolve, reject) => {
+      // Set a timeout to handle message port issues
+      const timeout = setTimeout(() => {
+        reject(new Error('Request timeout - please try again'));
+      }, 10000); // 10 second timeout
+      
+      chrome.runtime.sendMessage({
+        action: 'rewriteText',
+        text: text,
+        platform: this.currentPlatform || 'general',
+        scenarioType: scenarioType,
+        riskLevel: 'low' // Simple mode assumes low risk
+      }, (response) => {
+        clearTimeout(timeout);
+        
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (!response) {
+          reject(new Error('No response received from background script'));
+        } else if (response.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+  
+  /**
+   * Display smoothed result
+   */
+  displaySmoothResult(smoothedText, toneValue) {
+    const resultText = document.getElementById('smoothResultText');
+    const resultEncouragement = document.getElementById('resultEncouragement');
+    const smoothResult = document.getElementById('smoothResult');
+    
+    resultText.textContent = smoothedText;
+    
+    // Set encouraging message based on tone
+    const encouragements = {
+      friendly: "Perfect! Your message sounds warm and approachable. 😊",
+      balanced: "Great! Your message strikes the right professional tone. 👍",
+      firm: "Excellent! Your message is assertive yet respectful. 💪"
+    };
+    
+    let toneCategory = 'balanced';
+    if (toneValue <= 33) toneCategory = 'friendly';
+    else if (toneValue >= 67) toneCategory = 'firm';
+    
+    resultEncouragement.textContent = encouragements[toneCategory];
+    
+    smoothResult.classList.remove('hidden');
+    smoothResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    // Store the smoothed text for copying
+    this.smoothedText = smoothedText;
+  }
+  
+  /**
+   * Copy smoothed text to clipboard
+   */
+  async copySmoothedText() {
+    if (!this.smoothedText) return;
+    
+    try {
+      await navigator.clipboard.writeText(this.smoothedText);
+      
+      const copyBtn = document.getElementById('smoothCopyBtn');
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+        copyBtn.classList.remove('copied');
+      }, 2000);
+      
+      // Track usage
+      await this.sendMessage({ action: 'incrementUsage' });
+      
+    } catch (error) {
+      console.error('Failed to copy text:', error);
+    }
+  }
+  
+  /**
+   * Load user's preferred mode from storage
+   */
+  async loadPreferredMode() {
+    try {
+      const result = await chrome.storage.local.get(['preferredMode']);
+      const mode = result.preferredMode || 'simple';
+      this.switchMode(mode);
+    } catch (error) {
+      console.error('Failed to load preferred mode:', error);
+      this.switchMode('simple'); // Default to simple mode
+    }
   }
   
   disableRewriteButton(reason) {
@@ -750,8 +979,17 @@ class RealTalkPopup {
    * Show risk assessment and scenario sections
    */
   showRiskAndScenarioSections() {
-    document.getElementById('riskSection').classList.remove('hidden');
-    document.getElementById('scenarioSection').classList.remove('hidden');
+    const riskSection = document.getElementById('riskSection');
+    const scenarioSection = document.getElementById('scenarioSection');
+    
+    // Only show risk section for HIGH risk scenarios
+    if (this.riskAssessment && this.riskAssessment.overallRisk === 'high') {
+      riskSection.classList.remove('hidden');
+    } else {
+      riskSection.classList.add('hidden');
+    }
+    
+    scenarioSection.classList.remove('hidden');
   }
 
   /**

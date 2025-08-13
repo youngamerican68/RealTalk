@@ -20,21 +20,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const openrouterApiKey = config.OPENROUTER_API_KEY;
-    if (!openrouterApiKey) {
-      return res.status(500).json({ error: 'OpenRouter API key not configured' });
-    }
-
     const prompt = generatePrompt(text, platform || 'general', scenarioType, riskLevel);
 
-    const response = await fetch(config.OPENROUTER_API_URL, {
+    const response = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openrouterApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: config.MODEL,
+        model: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
         messages: [
           {
             role: 'system',
@@ -51,7 +45,7 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status}`);
+      throw new Error(`DeepInfra API error: ${response.status}`);
     }
 
     const data = await response.json();

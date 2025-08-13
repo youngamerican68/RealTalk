@@ -93,6 +93,45 @@ class RiskDetector {
         risk: 'medium'
       }
     };
+
+    // Politeness and social awkwardness indicators
+    this.politenessAnalysis = {
+      // Words/phrases that indicate bluntness or rudeness
+      bluntness: [
+        'nope', 'nah', 'whatever', 'fine', 'k', 'sure',
+        'obviously', 'clearly', 'duh', 'come on', 'seriously',
+        'you need to', 'you should', 'you have to', 'just do it'
+      ],
+      
+      // Indicators of social awkwardness  
+      awkwardness: [
+        'umm', 'uh', 'so yeah', 'i guess', 'maybe', 'sorta', 'kinda',
+        'i dunno', 'not sure', 'i think maybe', 'if thats ok',
+        'sorry to bother', 'hope this is ok', 'sorry again'
+      ],
+      
+      // Missing courtesy markers
+      missingCourtesy: {
+        requests: ['can you', 'could you', 'would you', 'need you to', 'want you to'],
+        noPlease: true, // Will check if requests lack "please"
+        noThankYou: true, // Will check if no gratitude expressed
+        abruptEnding: true // Will check for abrupt endings
+      },
+      
+      // ESL/Non-native speaker patterns
+      eslIndicators: [
+        'very much', 'so much sorry', 'please to', 'kindly do',
+        'revert back', 'do the needful', 'good name', 'out of station'
+      ],
+      
+      // Everyday scenarios that need smoothing
+      commonScenarios: {
+        cancellation: ['cant make it', 'have to cancel', 'sorry cant', 'maybe later', 'rain check'],
+        landlordRequest: ['landlord', 'fix', 'broken', 'repair', 'maintenance', 'heat', 'water'],
+        apology: ['my bad', 'oops', 'sorry about', 'messed up', 'screwed up'],
+        request: ['need', 'want', 'can you', 'help', 'favor', 'ask you']
+      }
+    };
   }
 
   /**
@@ -126,12 +165,16 @@ class RiskDetector {
     if (totalRisk >= 2.5) overallRisk = 'high';
     else if (totalRisk >= 1.5) overallRisk = 'medium';
     
+    // Add politeness analysis for Simple Mode
+    const politenessAnalysis = this.analyzePoliteness(text);
+    
     return {
       overallRisk,
       emotionalRisk,
       platformRisk,
       scenarioRisk,
       urgencyFactors,
+      politenessAnalysis,
       recommendations: this.generateRecommendations(overallRisk, scenarioRisk, emotionalRisk)
     };
   }
@@ -302,6 +345,104 @@ class RiskDetector {
     }
     
     return recommendations;
+  }
+
+  /**
+   * Analyze politeness and social smoothness of text
+   */
+  analyzePoliteness(text) {
+    const lowercaseText = text.toLowerCase();
+    const analysis = {
+      needsSmoothing: false,
+      issues: [],
+      severity: 'low', // low, medium, high
+      suggestedTone: 'balanced',
+      detectedScenario: null
+    };
+
+    let issueCount = 0;
+
+    // Check for bluntness (using word boundaries to avoid partial matches)
+    const bluntWords = this.politenessAnalysis.bluntness.filter(word => {
+      const regex = new RegExp(`\\b${word}\\b`, 'i');
+      return regex.test(text);
+    });
+    if (bluntWords.length > 0) {
+      analysis.issues.push('blunt_language');
+      issueCount += bluntWords.length;
+    }
+
+    // Check for awkwardness
+    const awkwardPhrases = this.politenessAnalysis.awkwardness.filter(phrase => 
+      lowercaseText.includes(phrase)
+    );
+    if (awkwardPhrases.length > 0) {
+      analysis.issues.push('awkward_phrasing');
+      issueCount += awkwardPhrases.length;
+    }
+
+    // Check for ESL indicators  
+    const eslIndicators = this.politenessAnalysis.eslIndicators.filter(phrase => 
+      lowercaseText.includes(phrase)
+    );
+    if (eslIndicators.length > 0) {
+      analysis.issues.push('esl_patterns');
+      issueCount += eslIndicators.length;
+    }
+
+    // Check for missing courtesy markers
+    const hasRequest = this.politenessAnalysis.missingCourtesy.requests.some(req => 
+      lowercaseText.includes(req)
+    );
+    if (hasRequest) {
+      if (!lowercaseText.includes('please')) {
+        analysis.issues.push('missing_please');
+        issueCount++;
+      }
+      if (!lowercaseText.includes('thank') && !lowercaseText.includes('appreciate')) {
+        analysis.issues.push('missing_gratitude');
+        issueCount++;
+      }
+    }
+
+    // Check for abrupt ending
+    if (text.length < 50 && !text.includes('.') && !text.includes('!') && !text.includes('?')) {
+      analysis.issues.push('abrupt_ending');
+      issueCount++;
+    }
+
+    // Detect common scenarios
+    for (const [scenarioName, keywords] of Object.entries(this.politenessAnalysis.commonScenarios)) {
+      const matchCount = keywords.filter(keyword => lowercaseText.includes(keyword)).length;
+      if (matchCount > 0) {
+        analysis.detectedScenario = scenarioName;
+        break;
+      }
+    }
+
+    // Determine severity and suggested tone
+    if (issueCount >= 3) {
+      analysis.severity = 'high';
+      analysis.needsSmoothing = true;
+      analysis.suggestedTone = 'friendly'; // Extra politeness needed
+    } else if (issueCount >= 2) {
+      analysis.severity = 'medium';
+      analysis.needsSmoothing = true;
+      analysis.suggestedTone = 'balanced';
+    } else if (issueCount >= 1) {
+      analysis.severity = 'low';
+      analysis.needsSmoothing = true;
+      analysis.suggestedTone = 'balanced';
+    }
+
+    // Adjust suggested tone based on detected scenario
+    if (analysis.detectedScenario === 'landlordRequest') {
+      analysis.suggestedTone = 'firm'; // Need to be assertive with landlords
+    } else if (analysis.detectedScenario === 'apology') {
+      analysis.suggestedTone = 'friendly'; // Apologies should be warm
+    }
+
+    return analysis;
   }
 }
 
