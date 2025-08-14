@@ -21,12 +21,18 @@ export default async function handler(req, res) {
     }
 
     const openrouterApiKey = config.OPENROUTER_API_KEY;
+    console.log('🔑 API Key present:', !!openrouterApiKey);
+    console.log('🤖 Using model:', config.MODEL);
+    
     if (!openrouterApiKey) {
+      console.error('❌ No OpenRouter API key found');
       return res.status(500).json({ error: 'OpenRouter API key not configured' });
     }
 
     const prompt = generatePrompt(text, platform || 'general', scenarioType, riskLevel);
+    console.log('📝 Generated prompt length:', prompt.length);
 
+    console.log('🚀 Making OpenRouter API call...');
     const response = await fetch(config.OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
@@ -50,7 +56,11 @@ export default async function handler(req, res) {
       }),
     });
 
+    console.log('📥 OpenRouter response status:', response.status);
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ OpenRouter API error: ${response.status}`, errorText);
       throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
