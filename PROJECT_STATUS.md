@@ -3,9 +3,29 @@
 ## 🎯 **Project Overview**
 
 **Product**: Crisis communication and reputation protection Chrome extension  
-**Status**: ✅ **PRODUCTION READY - MAJOR STRATEGIC PIVOT COMPLETE**  
-**Version**: 1.0.8  
-**Date**: August 7, 2025  
+**Status**: ✅ **FULLY FUNCTIONAL - DUAL-MODE IMPLEMENTATION COMPLETE**  
+**Version**: 1.1.0  
+**Date**: August 14, 2025  
+**Latest Fix**: ✅ Both Simple Mode and Expert Mode now properly rewrite messages (fixed AI prompt issues)  
+
+## 🔧 **RECENT BREAKTHROUGH - DUAL-MODE FUNCTIONALITY PERFECTED**
+
+### 🎯 **August 14, 2025 - Critical Fix Applied**
+**Problem Solved**: AI was generating responses TO messages instead of rewriting the messages themselves  
+**Root Cause**: Expert Mode scenario prompts used confusing terminology like "crisis management responses"  
+**Solution**: Updated all Expert Mode prompts to use same "Transform this message" language as working Simple Mode  
+
+### ✅ **Confirmed Working Examples**
+```
+Input: "if you dont finish your sandwich, im calling your mom"
+
+✅ Simple Mode (Friendly): "I noticed you didn't finish your sandwich. How about we save it for later?"
+✅ Expert Mode (Crisis Response): "I'm sorry to hear that you're having trouble finishing your sandwich. I'd like to find a solution that works for everyone."
+✅ Expert Mode (Professional Pushback): Generates assertive but professional versions
+✅ Expert Mode (De-escalation): Generates calmer, more diplomatic versions
+
+❌ OLD BROKEN: "I appreciate your concern about my lunch, but I believe I can manage my own meals..."
+```
 
 ## 🚀 **STRATEGIC TRANSFORMATION ACHIEVED**
 
@@ -18,6 +38,13 @@
 - **Value Proposition**: Prevents career/relationship-ending messages through AI crisis intervention
 
 ## 🚨 **MAJOR NEW FEATURES COMPLETED**
+
+### ✨ **Dual-Mode Interface (COMPLETE - August 14, 2025)**
+- **Simple Mode**: Clean interface with tone slider (Friendly ↔ Firm) for everyday politeness
+- **Expert Mode**: Full crisis communication toolkit with 5 specialized scenarios
+- **Seamless switching**: Users can toggle between modes based on their needs
+- **Unified backend**: Both modes use the same API with different prompt strategies
+- **Perfect for different user types**: Novices use Simple, professionals use Expert
 
 ### 🧠 **Risk Detection Engine (COMPLETE)**
 - **Real-time emotional analysis**: Detects violent language, anger triggers, excessive caps
@@ -68,16 +95,19 @@
 ```
 Production Infrastructure:
 ├── Frontend: Chrome Extension (Universal: <all_urls>)
+│   ├── Dual-Mode Interface: Simple Mode + Expert Mode toggle
+│   ├── Simple Mode: Tone slider (Friendly ↔ Firm) for everyday use
+│   ├── Expert Mode: 5 specialized crisis communication scenarios
 │   ├── Risk Detection: Real-time emotional trigger analysis
-│   ├── Scenario Engine: 5 specialized crisis communication modes
 │   ├── Panic Mode: Emergency override with visual indicators
 │   └── Content Scripts: Enhanced retry logic + dynamic injection
 ├── Backend: Vercel Serverless (https://real-talk-sigma.vercel.app)
-│   ├── Crisis Prompts: Reputation Shield, De-escalation, Crisis Response
-│   ├── Professional Pushback: Executive-level diplomatic responses
-│   └── Apology Framework: Relationship repair templates
-├── AI Provider: OpenRouter (FREE Mistral 7B - $0.00 per rewrite)
-├── Storage: Chrome Local Storage (usage tracking, scenario preferences)
+│   ├── Unified API: Single endpoint handles both modes
+│   ├── Simple Mode Prompts: Clean transformation for politeness
+│   ├── Expert Mode Prompts: Crisis-specific scenario handling
+│   └── Working AI Integration: Proper message rewriting (not responses)
+├── AI Provider: OpenRouter (Mixtral 8x7B - reliable and fast)
+├── Storage: Chrome Local Storage (usage tracking, mode preferences)
 └── Monetization: Stripe Ready (crisis intervention premium pricing)
 ```
 
