@@ -4,7 +4,7 @@ export default {
   OPENROUTER_API_URL: 'https://openrouter.ai/api/v1/chat/completions',
   
   // Model Configuration
-  MODEL: 'mistralai/mistral-7b-instruct:free',
+  MODEL: 'openchat/openchat-7b:free',
   
   // API Settings
   MAX_TOKENS: 800,

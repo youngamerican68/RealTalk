@@ -27,32 +27,53 @@ export default async function handler(req, res) {
 
     const prompt = generatePrompt(text, platform || 'general', scenarioType, riskLevel);
 
-    const response = await fetch(config.OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openrouterApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: prompt
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ],
-        max_tokens: config.MAX_TOKENS,
-        temperature: config.TEMPERATURE,
-      }),
-    });
+    // Retry logic for rate limits
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      response = await fetch(config.OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openrouterApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: config.MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: prompt
+            },
+            {
+              role: 'user',
+              content: text
+            }
+          ],
+          max_tokens: config.MAX_TOKENS,
+          temperature: config.TEMPERATURE,
+        }),
+      });
+
+      if (response.ok) {
+        break; // Success, exit retry loop
+      }
+
+      if (response.status === 429 && attempts < maxAttempts - 1) {
+        // Rate limited, wait and retry
+        const waitTime = Math.pow(2, attempts) * 1000; // Exponential backoff: 1s, 2s, 4s
+        console.log(`Rate limited, retrying in ${waitTime}ms (attempt ${attempts + 1}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        attempts++;
+      } else {
+        break; // Don't retry for other errors or final attempt
+      }
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.log('Rate limit hit, using fallback rewrites');
+        console.log('Rate limit hit after retries, using fallback rewrites');
         const fallbackRewrites = generateFallbackRewrites(text, platform, scenarioType);
         return res.status(200).json({
           rewrites: fallbackRewrites,
