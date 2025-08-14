@@ -21,23 +21,16 @@ export default async function handler(req, res) {
     }
 
     const openrouterApiKey = config.OPENROUTER_API_KEY;
-    console.log('🔑 API Key present:', !!openrouterApiKey);
-    console.log('🤖 Using model:', config.MODEL);
-    
     if (!openrouterApiKey) {
-      console.error('❌ No OpenRouter API key found');
       return res.status(500).json({ error: 'OpenRouter API key not configured' });
     }
 
-    const prompt = generatePrompt(text, platform || 'general', scenarioType, riskLevel);
-    console.log('📝 Generated prompt length:', prompt.length);
+    // Using simple direct prompt instead of complex generatePrompt function
 
-    // Retry logic for rate limits with logging
+    // Retry logic for rate limits
     let response;
     let attempts = 0;
     const maxAttempts = 3;
-    
-    console.log('🚀 Making OpenRouter API call...');
     
     while (attempts < maxAttempts) {
       response = await fetch(config.OPENROUTER_API_URL, {
@@ -51,19 +44,17 @@ export default async function handler(req, res) {
           messages: [
             {
               role: 'system',
-              content: prompt
+              content: 'You are a writing assistant. When users show you text they want to send, rewrite it to be more polite/professional while keeping the same request or instruction.'
             },
             {
               role: 'user',
-              content: text
+              content: `Rewrite this text to be more polite: "${text}"\n\nExamples:\n- Original: "do your homework now" → Rewrite: "Please do your homework"\n- Original: "if you dont finish your sandwich, im calling your mom" → Rewrite: "Please finish your sandwich"\n\nGive me 3 versions in this JSON format: [{"type":"polite","text":"..."},{"type":"professional","text":"..."},{"type":"direct","text":"..."}]`
             }
           ],
           max_tokens: config.MAX_TOKENS,
           temperature: config.TEMPERATURE,
         }),
       });
-
-      console.log(`📥 OpenRouter response status (attempt ${attempts + 1}):`, response.status);
 
       if (response.ok) {
         break; // Success, exit retry loop
@@ -72,7 +63,7 @@ export default async function handler(req, res) {
       if (response.status === 429 && attempts < maxAttempts - 1) {
         // Rate limited, wait and retry
         const waitTime = Math.pow(2, attempts) * 1000; // Exponential backoff: 1s, 2s, 4s
-        console.log(`⏳ Rate limited, retrying in ${waitTime}ms (attempt ${attempts + 1}/${maxAttempts})`);
+        console.log(`Rate limited, retrying in ${waitTime}ms (attempt ${attempts + 1}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         attempts++;
       } else {
@@ -80,14 +71,9 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log('📥 OpenRouter response status:', response.status);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ OpenRouter API error: ${response.status}`, errorText);
-      
       if (response.status === 429) {
-        console.log('💔 Rate limit hit after retries, using fallback rewrites');
+        console.log('Rate limit hit after retries, using fallback rewrites');
         const fallbackRewrites = generateFallbackRewrites(text, platform, scenarioType);
         return res.status(200).json({
           rewrites: fallbackRewrites,
@@ -96,7 +82,6 @@ export default async function handler(req, res) {
           fallback: true
         });
       }
-      
       throw new Error(`OpenRouter API error: ${response.status}`);
     }
 
@@ -116,7 +101,7 @@ export default async function handler(req, res) {
 
       const formattedRewrites = rewrites.map(rewrite => ({
         type: rewrite.type,
-        text: rewrite.text.substring(0, 280)
+        text: rewrite.text
       }));
 
       return res.status(200).json({
@@ -152,16 +137,18 @@ export default async function handler(req, res) {
 function generatePrompt(text, platform, scenarioType, riskLevel) {
   // High-anxiety scenario templates
   const scenarioPrompts = {
-    reputationShield: `You are RealTalk Draft, a crisis communication specialist. Transform this potentially reputation-damaging message into 3 safe, professional alternatives that protect the sender's reputation.
+    reputationShield: `You are RealTalk Draft, a message rewriting specialist. The user has written a message they want to send, but it might damage their reputation. Your job is to REWRITE their message into 3 safer, more professional versions that they can send instead.
 
-Original message: "${text}"
+User's original message they want to send: "${text}"
 
-This is a HIGH REPUTATION RISK scenario. Provide 3 reputation-protecting rewrites:
+This is a HIGH REPUTATION RISK scenario. Provide 3 improved versions of their message:
 1. Safest: Maximum diplomatic protection, suitable for public viewing
 2. Balanced: Professional but maintains some original intent
-3. Strategic: Thoughtful response that advances the conversation positively
+3. Strategic: Thoughtful version that advances the conversation positively
 
 CRITICAL RULES:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 - Eliminate ALL inflammatory language
 - Remove personal attacks or blame
 - Add diplomatic language ("I understand," "perspective," "collaborate")
@@ -173,37 +160,45 @@ CRITICAL RULES:
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    deEscalation: `You are RealTalk Draft, a conflict resolution expert. Transform this emotionally charged message into 3 de-escalating alternatives that cool down the situation.
+    deEscalation: `You are RealTalk Draft. The user wants to send an emotionally charged message but needs it de-escalated. Your job is to improve their draft message, NOT respond to it.
 
-Original message: "${text}"
+TASK: Take their draft message and make it calmer while keeping the same intent.
 
-This is a CONFLICT ESCALATION scenario. Provide 3 de-escalating rewrites:
+Their draft message: "${text}"
+
+EXAMPLE:
+- If they wrote: "you're being unreasonable and need to fix this now"
+- DON'T write a response like: "I understand you may feel the situation is unreasonable..."
+- DO rewrite their message like: "I'm concerned about this issue and would appreciate working together to resolve it"
+
+This is a CONFLICT ESCALATION scenario. Provide 3 calmer versions of THEIR message:
 1. Calming: Maximum de-escalation, acknowledges emotions
 2. Diplomatic: Professional while addressing the issue
 3. Bridge-building: Focuses on finding common ground
 
-ESSENTIAL RULES:
+CRITICAL RULES:
+- Improve THEIR message, don't write a response TO their message
+- Keep their same goal/intent
 - Remove ALL accusatory language
-- Acknowledge the other person's perspective
-- Use phrases like "I understand," "I see your point," "Let's work together"
 - Transform anger into concern
-- Suggest cooling-off period if appropriate
+- Use collaborative language
 - Focus on shared goals and solutions
 - Avoid "you" statements that blame
-- End with collaborative next steps
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    crisisResponse: `You are RealTalk Draft, a customer service crisis expert. Transform this complaint or crisis message into 3 professional crisis management responses.
+    crisisResponse: `You are RealTalk Draft, a message rewriting specialist. The user has written a complaint or crisis message they want to send. Your job is to REWRITE their message into 3 more professional versions that they can send instead.
 
-Original message: "${text}"
+User's original message they want to send: "${text}"
 
-This is a CUSTOMER CRISIS scenario. Provide 3 crisis response rewrites:
+This is a CUSTOMER CRISIS scenario. Provide 3 improved versions of their message:
 1. Apologetic: Takes full responsibility with sincere apology
 2. Solution-focused: Acknowledges issue and offers immediate solutions
 3. Escalation: Professional escalation to management/specialist
 
 CRISIS MANAGEMENT RULES:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 - Start with acknowledgment of the issue
 - Take appropriate responsibility without admitting fault
 - Express genuine concern for customer experience  
@@ -215,37 +210,31 @@ CRISIS MANAGEMENT RULES:
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    professionalPushback: `You are RealTalk Draft, an executive communication specialist. Transform this pushback message into 3 assertive but diplomatic professional responses.
+Edit this draft message to be more assertive and professional. Make 3 versions:
 
-Original message: "${text}"
+Examples of editing (NOT responding):
+- Draft: "you're being ridiculous" → Edit: "I disagree with this approach"
+- Draft: "if you dont finish your sandwich, im calling your mom" → Edit: "Please finish your sandwich"
 
-This is a PROFESSIONAL PUSHBACK scenario. Provide 3 assertive rewrites:
-1. Diplomatic: Gentle pushback that maintains relationships
-2. Assertive: Clear position while remaining respectful
-3. Executive: Confident leadership tone with clear boundaries
+Return 3 edited versions:
+1. Diplomatic: gentle but firm
+2. Assertive: clear and direct
+3. Executive: confident leadership
 
-PROFESSIONAL PUSHBACK RULES:
-- Maintain respect while being firm
-- Use data or rationale to support position
-- Acknowledge valid concerns before presenting counterpoints
-- Use phrases like "I have a different perspective," "Based on my experience"
-- Offer compromise or alternative approaches
-- Set clear boundaries professionally
-- End with invitation for further discussion
-- Protect professional relationships
+Format: JSON array with "type" and "text" fields.`,
 
-Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
+    apologyFramework: `You are RealTalk Draft, a message rewriting specialist. The user has written a mistake acknowledgment they want to send. Your job is to REWRITE their message into 3 more professional apology versions that they can send instead.
 
-    apologyFramework: `You are RealTalk Draft, a relationship repair specialist. Transform this mistake acknowledgment into 3 professional apology frameworks.
+User's original message they want to send: "${text}"
 
-Original message: "${text}"
-
-This is an APOLOGY SCENARIO. Provide 3 apology rewrites:
+This is an APOLOGY SCENARIO. Provide 3 improved versions of their message:
 1. Full Responsibility: Complete ownership with action plan
 2. Collaborative: Acknowledges issue while inviting partnership
 3. Learning-focused: Frames mistake as growth opportunity
 
 APOLOGY FRAMEWORK RULES:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 - Take clear responsibility without excuses
 - Acknowledge specific impact on the other person
 - Express genuine remorse
@@ -255,23 +244,25 @@ APOLOGY FRAMEWORK RULES:
 - Ask how you can make it right
 - End with gratitude for their patience
 
-Format: Return a JSON array with 3 objects containing "type" and "text" fields.`
+Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
   };
 
   // Standard platform prompts (fallback)
   const platformPrompts = {
-    slack: `You are RealTalk Draft, a workplace communication assistant. Transform this message into 3 professional alternatives optimized for Slack.
+    slack: `You are RealTalk Draft, a message rewriting specialist. The user has written a message they want to send on Slack. Your job is to REWRITE their message into 3 more professional versions optimized for Slack that they can send instead.
 
-Original message: "${text}"
+User's original message they want to send: "${text}"
 
 Risk Level: ${riskLevel || 'medium'}
 
-Provide 3 rewrites:
+Provide 3 improved versions of their message:
 1. Professional: Formal, diplomatic, suitable for senior leadership
 2. Direct: Clear and honest but respectful, good for peers  
 3. Collaborative: Solution-focused, emphasizing teamwork
 
 Rules based on risk level ${riskLevel}:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 ${riskLevel === 'high' ? '- MAXIMUM caution: remove ALL emotional language\n- Use highly diplomatic tone\n- Focus on solutions only' : ''}
 - Keep each under 280 characters
 - Maintain core concern
@@ -281,18 +272,20 @@ ${riskLevel === 'high' ? '- MAXIMUM caution: remove ALL emotional language\n- Us
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    linkedin: `You are RealTalk Draft, a professional networking specialist. Transform this message for LinkedIn with REPUTATION PROTECTION focus.
+    linkedin: `You are RealTalk Draft, a message rewriting specialist. The user has written a message they want to send on LinkedIn. Your job is to REWRITE their message into 3 more professional versions optimized for LinkedIn that they can send instead.
 
-Original message: "${text}"
+User's original message they want to send: "${text}"
 
 Risk Level: ${riskLevel || 'medium'} - This is a professional networking platform where reputation matters.
 
-Provide 3 reputation-safe rewrites:
+Provide 3 improved versions of their message:
 1. Professional: Maximum diplomatic protection for public viewing
 2. Direct: Clear but respectful, suitable for professional connections
 3. Collaborative: Builds professional relationships and networks
 
 LINKEDIN-SPECIFIC RULES:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 - Consider this may be public and affect professional reputation
 - Use industry-appropriate language
 - Focus on professional growth and collaboration
@@ -303,18 +296,20 @@ LINKEDIN-SPECIFIC RULES:
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    reddit: `You are RealTalk Draft, a public communication specialist. Transform this message for Reddit with REPUTATION and HARASSMENT protection.
+    reddit: `You are RealTalk Draft, a message rewriting specialist. The user has written a message they want to post on Reddit. Your job is to REWRITE their message into 3 safer versions that they can post instead.
 
-Original message: "${text}"
+User's original message they want to post: "${text}"
 
 Risk Level: ${riskLevel || 'high'} - This is a PUBLIC FORUM where messages can go viral and attract harassment.
 
-Provide 3 public-safe rewrites:
+Provide 3 improved versions of their message:
 1. Safest: Maximum protection against trolling and harassment
 2. Balanced: Clear position while avoiding controversy triggers
 3. Thoughtful: Contributes meaningfully to discussion
 
 REDDIT-SPECIFIC RULES:
+- REWRITE their message, don't respond to it
+- Keep the same general purpose/goal as their original message
 - Consider this is PUBLIC and can be screenshot/shared
 - Avoid anything that could trigger harassment or trolling
 - Remove personal information or identifiable details
@@ -325,25 +320,33 @@ REDDIT-SPECIFIC RULES:
 
 Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
 
-    general: `You are RealTalk Draft, a communication safety specialist. Transform this message with appropriate caution for the detected risk level.
+    general: `You are RealTalk Draft. The user wants to send a message but needs it polished. Your job is to improve their draft message, NOT respond to it.
 
-Original message: "${text}"
+TASK: Take their draft message and make it better while keeping the same intent.
+
+Their draft message: "${text}"
+
+EXAMPLE:
+- If they wrote: "you're being ridiculous about this deadline"
+- DON'T write a response like: "I understand your concern about the deadline..."  
+- DO rewrite their message like: "I'm concerned this deadline might be challenging to meet"
 
 Risk Level: ${riskLevel || 'medium'}
 
-Provide 3 risk-appropriate rewrites:
+Provide 3 improved versions of THEIR message (not responses to it):
 1. Safest: Maximum protection and diplomacy
-2. Balanced: Professional while maintaining intent
+2. Balanced: Professional while maintaining intent  
 3. Strategic: Thoughtful approach that advances goals
 
-Risk-based rules:
+CRITICAL RULES:
+- Improve THEIR message, don't write a response TO their message
+- Keep their same goal/intent
+- Make it more professional/polite
 ${riskLevel === 'high' ? '- CRISIS MODE: Maximum diplomatic protection\n- Remove ALL emotional/inflammatory language\n- Focus only on solutions and next steps' : ''}
 ${riskLevel === 'medium' ? '- CAUTION MODE: Professional tone with diplomatic language\n- Remove harsh language, keep respectful intent' : ''}
 ${riskLevel === 'low' ? '- STANDARD MODE: Professional improvement with clear communication' : ''}
-- Use "I" statements when appropriate
-- Suggest constructive next steps
 
-Format: Return a JSON array with 3 objects containing "type" and "text" fields.`
+Format: Return a JSON array with 3 objects containing "type" and "text" fields.`,
   };
 
   // Return scenario-specific prompt if provided, otherwise use platform prompt
